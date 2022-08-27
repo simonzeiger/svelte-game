@@ -3,12 +3,9 @@ import App from './App.svelte'
 
 import { initializeApp, getApps } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
-import { config } from 'dotenv';
-
-config();
 
 const firebaseConfig = {
-  apiKey: process.env.AUTH_TOKEN,
+  apiKey: "AIzaSyBsCTqTEJxsBYGhShNeOetUxTUTHFF7u0o",
   authDomain: "svelte-game-43670.firebaseapp.com",
   projectId: "svelte-game-43670",
   storageBucket: "svelte-game-43670.appspot.com",
