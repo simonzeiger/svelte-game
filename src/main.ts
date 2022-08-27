@@ -18,11 +18,6 @@ if (!getApps().length) {
   initializeApp(firebaseConfig);
 }
 
-/**
- * Global firestore database object. 
- */
-export const db = getFirestore();
-
 const servers = {
   iceServers: [
     {
@@ -32,11 +27,13 @@ const servers = {
   iceCandidatePoolSize: 10,
 };
 
-/**  Global State */
-export const pc = new RTCPeerConnection(servers);
-
-let localStream = null;
-let remoteStream = null;
+/**
+ * Global firestore database object. 
+ */
+export const CONTEXT = {
+  db: getFirestore(),
+  pc: new RTCPeerConnection(servers),
+};
 
 const app = new App({
   target: document.getElementById('app')
