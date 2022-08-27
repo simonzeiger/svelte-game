@@ -7,15 +7,19 @@
 
   function localDivClicked() {
     localDivColor = "#" + Math.floor(Math.random() * 16777215).toString(16);
+    console.log(CONTEXT.pc);
+    console.log("dc", $dataChannel, $dataChannel?.readyState);
     if ($dataChannel && $dataChannel.readyState === "open") {
       $dataChannel.send(localDivColor);
     }
   }
 
   dataChannel.subscribe((channel) => {
-    channel.addEventListener("message", (event: MessageEvent) => {
-      peerDivColor = event.data;
-    });
+    if (channel != null) {
+      channel.addEventListener("message", (event: MessageEvent) => {
+        peerDivColor = event.data;
+      });
+    }
   });
 </script>
 

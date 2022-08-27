@@ -14,14 +14,24 @@
   export let onLobbyConnected: () => void;
 
   let lobbyId = "";
+  let showClient = true;
+
+  // Set datachannel for remote connection (the client that didnt create the lobby).
+  CONTEXT.pc.ondatachannel = (dcEvent) => {
+    console.log("dc set for remote");
+    dataChannel.set(dcEvent.channel);
+  };
+
+  dataChannel.set(CONTEXT.pc.createDataChannel("data"));
 
   async function createLobby() {
-    const lobbiesDoc = doc(collection(CONTEXT.db, "lobbies"));
+    const lobbyDoc = doc(collection(CONTEXT.db, "lobbies"));
 
-    const offerCandidates = collection(lobbiesDoc, "offerCandidates");
-    const answerCandidates = collection(lobbiesDoc, "answerCandidates");
+    const offerCandidates = collection(lobbyDoc, "offerCandidates");
+    const answerCandidates = collection(lobbyDoc, "answerCandidates");
 
-    lobbyId = lobbiesDoc.id;
+    lobbyId = lobbyDoc.id;
+    console.log(lobbyId);
 
     // Get candidates for caller, save to db
     CONTEXT.pc.onicecandidate = (event) => {
@@ -29,7 +39,9 @@
     };
 
     // Create offer
-    const offerDescription = await CONTEXT.pc.createOffer();
+    const offerDescription = await CONTEXT.pc.createOffer({
+      offerToReceiveAudio: true,
+    });
     await CONTEXT.pc.setLocalDescription(offerDescription);
 
     const offer = {
@@ -37,10 +49,15 @@
       type: offerDescription.type,
     };
 
-    await setDoc(lobbiesDoc, { offer });
+    await setDoc(lobbyDoc, { offer });
 
     // Listen for remote answer
-    onSnapshot(lobbiesDoc, (snapshot) => {
+    onSnapshot(lobbyDoc, (snapshot) => {
+      console.log(
+        "On Snaphshot 1",
+        CONTEXT.pc.currentRemoteDescription,
+        snapshot.data()
+      );
       const data = snapshot.data();
       if (!CONTEXT.pc.currentRemoteDescription && data?.answer) {
         const answerDescription = new RTCSessionDescription(data.answer);
@@ -50,6 +67,7 @@
 
     // When answered, add candidate to peer connection
     onSnapshot(answerCandidates, (snapshot) => {
+      console.log("On Snaphshot 2");
       snapshot.docChanges().forEach((change) => {
         if (change.type === "added") {
           const candidate = new RTCIceCandidate(change.doc.data());
@@ -57,6 +75,8 @@
         }
       });
     });
+
+    onLobbyConnected();
   }
 
   async function joinLobby() {
@@ -65,6 +85,7 @@
     const offerCandidates = collection(lobbyDoc, "offerCandidates");
 
     CONTEXT.pc.onicecandidate = (event) => {
+      console.log("this bitch aint working");
       event.candidate && addDoc(answerCandidates, event.candidate.toJSON());
     };
 
@@ -86,6 +107,7 @@
     await updateDoc(lobbyDoc, { answer });
 
     onSnapshot(offerCandidates, (snapshot) => {
+      console.log("On Snaphshot 3", snapshot, snapshot.docChanges());
       snapshot.docChanges().forEach((change) => {
         console.log(change);
         if (change.type === "added") {
@@ -94,24 +116,22 @@
         }
       });
     });
-    startTransmitting();
-    onLobbyConnected();
-  }
 
-  function startTransmitting() {
-    dataChannel.set(CONTEXT.pc.createDataChannel("data"));
+    onLobbyConnected();
   }
 </script>
 
-<div>
-  <h2>Create a new Lobby</h2>
-  <button on:click={createLobby}>Create Lobby</button>
+{#if showClient}
+  <div>
+    <h2>Create a new Lobby</h2>
+    <button on:click={createLobby}>Create Lobby</button>
 
-  <h2>Join a Lobby</h2>
+    <h2>Join a Lobby</h2>
 
-  <input type="string" bind:value={lobbyId} />
-  <button on:click={joinLobby}>Join</button>
-</div>
+    <input type="string" bind:value={lobbyId} />
+    <button on:click={joinLobby}>Join</button>
+  </div>
+{/if}
 
 <style>
 </style>

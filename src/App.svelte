@@ -9,9 +9,8 @@
 </script>
 
 <main>
-  {#if !lobbyConnected}
-    <Client {onLobbyConnected} />
-  {:else}
+  <Client {onLobbyConnected} />
+  {#if lobbyConnected}
     <Game />
   {/if}
 </main>
