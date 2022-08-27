@@ -10,6 +10,8 @@
     updateDoc,
   } from "firebase/firestore";
 
+  export let onLobbyConnected: () => void;
+
   let lobbyId = "";
 
   async function createLobby() {
@@ -89,6 +91,7 @@
         }
       });
     });
+    onLobbyConnected();
   }
 </script>
 
