@@ -1,26 +1,38 @@
 <script lang="ts">
-  import { dataChannel } from "./store";
-  import { CONTEXT } from "../main";
+  import {
+    getIsHost,
+    sendGameUpdate,
+    sendPeerPlayerUpdate,
+  } from "./connection";
+
+  export let lobbyId: string;
 
   let localDivColor = "black",
     peerDivColor = "black";
 
   function localDivClicked() {
-    localDivColor = "#" + Math.floor(Math.random() * 16777215).toString(16);
-    console.log(CONTEXT.pc);
-    console.log("dc", $dataChannel, $dataChannel?.readyState);
-    if ($dataChannel && $dataChannel.readyState === "open") {
-      $dataChannel.send(localDivColor);
-    }
-  }
-
-  dataChannel.subscribe((channel) => {
-    if (channel != null) {
-      channel.addEventListener("message", (event: MessageEvent) => {
-        peerDivColor = event.data;
+    if (getIsHost()) {
+      sendGameUpdate({
+        playerState: {
+          direction: [1, 0],
+          pos: [1, 15],
+          health: 3,
+          isDead: false,
+        },
+        enemyStates: new Map([
+          [0, { health: 4, isDead: false, direction: [0, 4], pos: [5, 5] }],
+        ]),
+        mapState: { mapGrid: [] },
+      });
+    } else {
+      sendPeerPlayerUpdate({
+        direction: [0, 0],
+        pos: [1, 2],
+        health: 3,
+        isDead: false,
       });
     }
-  });
+  }
 </script>
 
 <div>Game</div>

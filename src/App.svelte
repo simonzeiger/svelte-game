@@ -3,15 +3,18 @@
   import Game from "./lib/Game.svelte";
 
   let lobbyConnected = false;
-  function onLobbyConnected() {
+  let lobbyId = "";
+  function onLobbyConnected(lobbyIdForGame?: string) {
     lobbyConnected = true;
+    lobbyId = lobbyIdForGame;
   }
 </script>
 
 <main>
-  <Client {onLobbyConnected} />
-  {#if lobbyConnected}
-    <Game />
+  {#if !lobbyConnected}
+    <Client {onLobbyConnected} />
+  {:else}
+    <Game {lobbyId} />
   {/if}
 </main>
 
