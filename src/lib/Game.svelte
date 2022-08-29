@@ -4,8 +4,11 @@
     sendGameUpdate,
     sendPeerPlayerUpdate,
   } from "./connection";
+  import { initGame } from "../phaser";
 
   export let lobbyId: string;
+
+  initGame();
 
   let localDivColor = "black",
     peerDivColor = "black";
@@ -40,6 +43,7 @@
 <div on:click={localDivClicked} style:background-color={localDivColor} />
 <p>Peer</p>
 <div style:background-color={peerDivColor} />
+<div id="game" />
 
 <style>
   div {
