@@ -10,7 +10,8 @@ import {
 } from "firebase/firestore";
 import { initializeApp, getApps } from 'firebase/app';
 import { syncGameState, syncPeerPlayer } from './game_state';
-import type { GameState, PlayerState } from './game_state';
+import type { GameState, PeerPlayerState } from './game_state';
+import { getIsHost, setIsHost } from "../globals";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBsCTqTEJxsBYGhShNeOetUxTUTHFF7u0o",
@@ -38,18 +39,13 @@ const servers = {
 const db = getFirestore();
 const pc = initRemoteConnection();
 
-let isHost = false;
-export function getIsHost() {
-  return isHost;
-}
-
 function initRemoteConnection() {
   const connection = new RTCPeerConnection(servers);
   connection.ondatachannel = (dcEvent) => {
     if (dcEvent.channel.label === GAME_STATE_DC_LABEL) {
       gameStateDataChannel = dcEvent.channel;
       // Listen on the peer player to synchronize the game state.
-      if (!isHost) {
+      if (!getIsHost()) {
         gameStateDataChannel.addEventListener("message", (event: MessageEvent) => {
           syncGameState(event.data);
         });
@@ -57,7 +53,7 @@ function initRemoteConnection() {
     } else if (dcEvent.channel.label === PEER_PLAYER_DC_LABEL) {
       peerPlayerDataChannel = dcEvent.channel;
       // Listen on the host player to synchronize the peer player.
-      if (isHost) {
+      if (getIsHost()) {
         peerPlayerDataChannel.addEventListener("message", (event: MessageEvent) => {
           syncPeerPlayer(event.data);
         });
@@ -73,7 +69,7 @@ const PEER_PLAYER_DC_LABEL = "peer_player_state";
 let peerPlayerDataChannel: RTCDataChannel;
 
 export async function createLobby() {
-  isHost = true;
+  setIsHost(true);
 
   // Need to create data channel before offers.
   gameStateDataChannel = pc.createDataChannel(GAME_STATE_DC_LABEL);
@@ -106,11 +102,6 @@ export async function createLobby() {
 
   // Listen for remote answer
   onSnapshot(lobbyDoc, (snapshot) => {
-    console.log(
-      "On Snaphshot 1",
-      pc.currentRemoteDescription,
-      snapshot.data()
-    );
     const data = snapshot.data();
     if (!pc.currentRemoteDescription && data?.answer) {
       const answerDescription = new RTCSessionDescription(data.answer);
@@ -120,7 +111,6 @@ export async function createLobby() {
 
   // When answered, add candidate to peer connection
   onSnapshot(answerCandidates, (snapshot) => {
-    console.log("On Snaphshot 2");
     snapshot.docChanges().forEach((change) => {
       if (change.type === "added") {
         const candidate = new RTCIceCandidate(change.doc.data());
@@ -133,7 +123,7 @@ export async function createLobby() {
 }
 
 export async function joinLobby(lobbyId: string) {
-  isHost = false;
+  setIsHost(false);
 
   peerPlayerDataChannel = pc.createDataChannel(PEER_PLAYER_DC_LABEL);
 
@@ -142,7 +132,6 @@ export async function joinLobby(lobbyId: string) {
   const offerCandidates = collection(lobbyDoc, "offerCandidates");
 
   pc.onicecandidate = (event) => {
-    console.log("this bitch aint working");
     event.candidate && addDoc(answerCandidates, event.candidate.toJSON());
   };
 
@@ -164,7 +153,6 @@ export async function joinLobby(lobbyId: string) {
   await updateDoc(lobbyDoc, { answer });
 
   onSnapshot(offerCandidates, (snapshot) => {
-    console.log("On Snaphshot 3", snapshot, snapshot.docChanges());
     snapshot.docChanges().forEach((change) => {
       console.log(change);
       if (change.type === "added") {
@@ -175,12 +163,16 @@ export async function joinLobby(lobbyId: string) {
   });
 }
 
-// Send game state update from host.
+// Send game state update from host to peer player.
 export function sendGameUpdate(update: GameState) {
-  gameStateDataChannel.send(JSON.stringify(update));
+  if (gameStateDataChannel.readyState === "open") {
+    gameStateDataChannel.send(JSON.stringify(update));
+  }
 }
 
-// Send peer player state update from peer player.
-export function sendPeerPlayerUpdate(update: PlayerState) {
-  peerPlayerDataChannel.send(JSON.stringify(update));
+// Send peer player state update from peer player to host.
+export function sendPeerPlayerUpdate(update: PeerPlayerState) {
+  if (peerPlayerDataChannel.readyState === "open") {
+    peerPlayerDataChannel.send(JSON.stringify(update));
+  }
 }
