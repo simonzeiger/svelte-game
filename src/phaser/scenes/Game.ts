@@ -1,13 +1,14 @@
 import Phaser from 'phaser';
-import { Player } from './Player';
-import type { GameState, PlayerState, PeerPlayerState } from 'src/lib/game_state';
+import { Player } from '../game_objects/player';
+import type { GameState, PeerPlayerState } from 'src/lib/game_state';
 import { getIsHost } from '../../globals';
 import { sendGameUpdate, sendPeerPlayerUpdate } from '../../lib/connection';
+import type { Cursors } from '../type_defs';
 
 export class GameScene extends Phaser.Scene {
   hostPlayer: Player;
   peerPlayer: Player;
-  cursors: Phaser.Types.Input.Keyboard.CursorKeys;
+  cursors: Cursors;
 
   constructor() {
     super('GameScene');
@@ -15,11 +16,11 @@ export class GameScene extends Phaser.Scene {
 
   syncGameState(gameState: GameState) {
     this.hostPlayer.setAngle(gameState.hostPlayerState.angle);
-    this.hostPlayer.setVelocity(...gameState.hostPlayerState.velocity);
+    this.hostPlayer.setPosition(...gameState.hostPlayerState.position);
     this.hostPlayer.setTurretRotation(gameState.hostPlayerState.turretRotation);
 
     this.peerPlayer.setAngle(gameState.peerPlayerState.angle);
-    this.peerPlayer.setVelocity(...gameState.peerPlayerState.velocity);
+    this.peerPlayer.setPosition(...gameState.peerPlayerState.position);
     this.peerPlayer.setTurretRotation(gameState.peerPlayerState.turretRotation);
   }
 
@@ -49,14 +50,22 @@ export class GameScene extends Phaser.Scene {
 
     worldLayer.setCollisionByProperty({ collides: true });
 
-    this.cursors = this.input.keyboard.createCursorKeys();
-    this.input.keyboard.addKeys('W,S,A,D');
+    // this.cursors = this.input.keyboard.createCursorKeys();
+    this.cursors = this.input.keyboard.addKeys(
+      {
+        W: Phaser.Input.Keyboard.KeyCodes.W,
+        S: Phaser.Input.Keyboard.KeyCodes.S,
+        A: Phaser.Input.Keyboard.KeyCodes.A,
+        D: Phaser.Input.Keyboard.KeyCodes.D,
+        UP: Phaser.Input.Keyboard.KeyCodes.UP,
+        DOWN: Phaser.Input.Keyboard.KeyCodes.DOWN,
+        LEFT: Phaser.Input.Keyboard.KeyCodes.LEFT,
+        RIGHT: Phaser.Input.Keyboard.KeyCodes.RIGHT,
+      }) as Cursors;
 
     this.hostPlayer = new Player(this, new Phaser.Math.Vector2(400, 350), /** isUserControlled = */ getIsHost(), this.cursors, worldLayer);
     this.peerPlayer = new Player(this, new Phaser.Math.Vector2(700, 350), /** isUserControlled = */ false, this.cursors, worldLayer);
-    if (getIsHost()) {
-      this.physics.add.collider(this.hostPlayer.player, this.peerPlayer.player);
-    }
+    this.physics.add.collider(this.hostPlayer.player, this.peerPlayer.player);
   }
 
   update(time: number, delta: number) {
@@ -64,30 +73,19 @@ export class GameScene extends Phaser.Scene {
     this.peerPlayer.update(time, delta);
 
     if (getIsHost()) {
-      const hostPlayerState: PlayerState = {
-        position: [this.hostPlayer.player.body.position.x, this.hostPlayer.player.body.position.y],
-        velocity: [this.hostPlayer.player.body.velocity.x, this.hostPlayer.player.body.velocity.y],
-        angle: this.hostPlayer.player.angle,
-        turretRotation: this.hostPlayer.turret.rotation,
-        health: 0,
-        isDead: false,
-      };
-
-      const peerPlayerState: PlayerState = {
-        position: [this.peerPlayer.player.body.position.x, this.peerPlayer.player.body.position.y],
-        velocity: [this.peerPlayer.player.body.velocity.x, this.peerPlayer.player.body.velocity.y],
-        angle: this.peerPlayer.player.angle,
-        turretRotation: this.peerPlayer.turret.rotation,
-        health: 0,
-        isDead: false,
-      };
-
-      sendGameUpdate({ hostPlayerState, peerPlayerState, enemyStates: new Map(), mapState: { mapGrid: [] } });
+      sendGameUpdate({
+        hostPlayerState: this.hostPlayer.getCurrentState(),
+        peerPlayerState: this.peerPlayer.getCurrentState(),
+        enemyStates: new Map(),
+        mapState: { mapGrid: [] }
+      });
     } else {
       sendPeerPlayerUpdate({
         cursors: {
-          isLeftPressed: this.cursors.left.isDown, isUpPressed: this.cursors.up.isDown,
-          isRightPressed: this.cursors.right.isDown, isDownPressed: this.cursors.down.isDown,
+          isLeftPressed: this.cursors.LEFT.isDown || this.cursors.A.isDown,
+          isUpPressed: this.cursors.UP.isDown || this.cursors.W.isDown,
+          isRightPressed: this.cursors.RIGHT.isDown || this.cursors.D.isDown,
+          isDownPressed: this.cursors.DOWN.isDown || this.cursors.S.isDown,
         },
         mousePosition: [this.input.x, this.input.y]
       });

@@ -39,7 +39,6 @@ interface MapState {
 
 export interface PlayerState {
   position: Vector2;
-  velocity: Vector2;
   angle: number;
   turretRotation: number;
   health: number;

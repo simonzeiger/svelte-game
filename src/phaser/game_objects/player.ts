@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-
-type SpriteFactory = (x: number, y: number, texture: string | Phaser.Textures.Texture, frame?: string | number) => Phaser.GameObjects.Sprite;
+import type { PlayerState } from 'src/lib/game_state';
+import type { Cursors } from '../type_defs';
 
 const PLAYER_SPEED = 300;
 const PLAYER_DECEL = 4;
@@ -13,7 +13,6 @@ export class Player {
 
   player: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
 
-
   private currentSpeed: number;
   private shadow: Phaser.GameObjects.Sprite;
   turret: Phaser.GameObjects.Sprite;
@@ -22,7 +21,7 @@ export class Player {
     private scene: Phaser.Scene,
     initialPos: Phaser.Math.Vector2,
     private isUserControlled: boolean,
-    private cursors: Phaser.Types.Input.Keyboard.CursorKeys,
+    private cursors: Cursors,
     collider: Phaser.Tilemaps.TilemapLayer,
   ) {
     this.player = scene.physics.add.sprite(initialPos.x, initialPos.y, "tanks", "tank1");
@@ -56,12 +55,26 @@ export class Player {
     this.turret.setDepth(3);
   }
 
+  getCurrentState(): PlayerState {
+    return {
+      position: [this.player.x, this.player.y],
+      angle: this.player.angle,
+      turretRotation: this.turret.rotation,
+      health: 0,
+      isDead: false,
+    };
+  }
+
   setAngle(angle: number) {
     this.player.angle = angle;
   }
 
   setVelocity(x: number, y: number) {
     this.player.body.setVelocity(x, y)
+  }
+
+  setPosition(x: number, y: number) {
+    this.player.setPosition(x, y);
   }
 
   setTurretRotation(rotation: number) {
@@ -105,8 +118,10 @@ export class Player {
 
   update(time: number, delta: number) {
     if (this.isUserControlled) {
-      this.setAngle(this.computePlayerAngle(this.cursors.left.isDown, this.cursors.right.isDown));
-      const computedVelocity = this.computePlayerVelocity(this.cursors.down.isDown, this.cursors.up.isDown);
+      this.setAngle(this.computePlayerAngle(this.cursors.LEFT.isDown || this.cursors.A.isDown,
+        this.cursors.RIGHT.isDown || this.cursors.D.isDown));
+      const computedVelocity = this.computePlayerVelocity(this.cursors.DOWN.isDown || this.cursors.S.isDown,
+        this.cursors.UP.isDown || this.cursors.W.isDown);
       this.setVelocity(computedVelocity.x, computedVelocity.y);
     }
 

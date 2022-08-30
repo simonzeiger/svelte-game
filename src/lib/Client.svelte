@@ -11,6 +11,7 @@
   <button
     on:click={async () => {
       lobbyId = await createLobby();
+      navigator.clipboard.writeText(lobbyId);
       onLobbyConnected(lobbyId);
     }}>Create Lobby</button
   >
