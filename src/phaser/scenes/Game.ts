@@ -4,11 +4,13 @@ import type { GameState, PeerPlayerState } from 'src/lib/game_state';
 import { getIsHost } from '../../globals';
 import { sendGameUpdate, sendPeerPlayerUpdate } from '../../lib/connection';
 import type { Cursors } from '../type_defs';
+import { BulletGroup } from '../game_objects/bullet';
 
 export class GameScene extends Phaser.Scene {
   hostPlayer: Player;
   peerPlayer: Player;
   cursors: Cursors;
+  bullets: BulletGroup;
 
   constructor() {
     super('GameScene');
@@ -27,7 +29,8 @@ export class GameScene extends Phaser.Scene {
   syncPeerPlayerState(peerPlayerState: PeerPlayerState) {
     this.peerPlayer.setAngle(this.peerPlayer.computePlayerAngle(
       peerPlayerState.cursors.isLeftPressed, peerPlayerState.cursors.isRightPressed));
-    const computedVelocity = this.peerPlayer.computePlayerVelocity(peerPlayerState.cursors.isDownPressed, peerPlayerState.cursors.isUpPressed);
+    const computedVelocity = this.peerPlayer.computePlayerVelocity(
+      peerPlayerState.cursors.isDownPressed, peerPlayerState.cursors.isUpPressed);
     this.peerPlayer.setVelocity(computedVelocity.x, computedVelocity.y);
     this.peerPlayer.setTurretRotation(this.peerPlayer.computeTurretRotation(...peerPlayerState.mousePosition));
   }
@@ -35,7 +38,8 @@ export class GameScene extends Phaser.Scene {
   preload() {
     this.load.image('tiles', 'src/assets/tilesets/grass.png');
     this.load.tilemapTiledJSON("map", "src/assets/tilemaps/map.json");
-    Player.preload(this);
+    this.load.atlas('tanks', 'src/assets/characters/tank/tanks.png', 'src/assets/characters/tank/tanks.json');
+    this.load.image('bullet', 'src/assets/characters/bullet.png');
   }
 
   create() {
@@ -46,11 +50,10 @@ export class GameScene extends Phaser.Scene {
     const tileset = map.addTilesetImage("grass", "tiles");
 
     // Parameters: layer name (or index) from Tiled, tileset, x, y
-    const worldLayer = map.createLayer("Tile Layer 1", tileset, 0, 0);
+    const worldLayer = map.createLayer("Tile Layer 1", tileset, 0, 0).setScale(2);
 
     worldLayer.setCollisionByProperty({ collides: true });
 
-    // this.cursors = this.input.keyboard.createCursorKeys();
     this.cursors = this.input.keyboard.addKeys(
       {
         W: Phaser.Input.Keyboard.KeyCodes.W,
@@ -63,15 +66,33 @@ export class GameScene extends Phaser.Scene {
         RIGHT: Phaser.Input.Keyboard.KeyCodes.RIGHT,
       }) as Cursors;
 
-    this.hostPlayer = new Player(this, new Phaser.Math.Vector2(400, 350), /** isUserControlled = */ getIsHost(), this.cursors, worldLayer);
-    this.peerPlayer = new Player(this, new Phaser.Math.Vector2(700, 350), /** isUserControlled = */ false, this.cursors, worldLayer);
-    this.physics.add.collider(this.hostPlayer.player, this.peerPlayer.player);
+    this.bullets = new BulletGroup(this);
+
+    this.hostPlayer = new Player(
+      this,
+      new Phaser.Math.Vector2(400, 350),
+      /** isUserControlled = */ getIsHost(),
+      this.cursors,
+      worldLayer,
+      this.bullets
+    );
+    this.peerPlayer = new Player(
+      this,
+      new Phaser.Math.Vector2(700, 350),
+      /** isUserControlled = */ false,
+      this.cursors,
+      worldLayer,
+      this.bullets
+    );
+
+    this.physics.add.collider(this.bullets, this.peerPlayer);
+    this.physics.add.collider(this.bullets, this.hostPlayer);
+    this.physics.add.collider(this.bullets, worldLayer);
+
+    this.physics.add.collider(this.hostPlayer, this.peerPlayer);
   }
 
   update(time: number, delta: number) {
-    this.hostPlayer.update(time, delta);
-    this.peerPlayer.update(time, delta);
-
     if (getIsHost()) {
       sendGameUpdate({
         hostPlayerState: this.hostPlayer.getCurrentState(),

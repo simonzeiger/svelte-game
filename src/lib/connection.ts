@@ -165,14 +165,14 @@ export async function joinLobby(lobbyId: string) {
 
 // Send game state update from host to peer player.
 export function sendGameUpdate(update: GameState) {
-  if (gameStateDataChannel.readyState === "open") {
+  if (gameStateDataChannel?.readyState === "open") {
     gameStateDataChannel.send(JSON.stringify(update));
   }
 }
 
 // Send peer player state update from peer player to host.
 export function sendPeerPlayerUpdate(update: PeerPlayerState) {
-  if (peerPlayerDataChannel.readyState === "open") {
+  if (peerPlayerDataChannel?.readyState === "open") {
     peerPlayerDataChannel.send(JSON.stringify(update));
   }
 }
