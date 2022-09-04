@@ -3,28 +3,15 @@ import type { GameScene } from "../phaser/scenes/Game";
 
 type Vector2 = [number, number];
 
-enum AttackType {
+export enum AttackType {
   BULLET,
   BOMB,
-}
-
-interface PlayerMove {
-  x: number;
-  y: number;
-}
-
-interface PlayerAttack {
-  type: AttackType;
-}
-
-interface EnemyAttack {
-  type: AttackType;
 }
 
 interface EnemyState {
   direction: Vector2;
   pos: Vector2;
-  attack?: EnemyAttack;
+  attack?: AttackType;
   health: number;
   isDead: boolean;
 }
@@ -37,23 +24,30 @@ interface MapState {
   mapGrid: TileState[][];
 }
 
+export interface BulletState {
+  rotation: number;
+  position: Vector2;
+  visible: boolean;
+}
+
 export interface PlayerState {
   position: Vector2;
   angle: number;
   turretRotation: number;
   health: number;
   isDead: boolean;
-  attack?: PlayerAttack;
+  attack?: AttackType;
 }
 
 export interface PeerPlayerState {
-  cursors: { isLeftPressed: boolean, isUpPressed: boolean, isRightPressed: boolean, isDownPressed: boolean };
-  mousePosition: Vector2;
+  keys: { isLeftPressed: boolean, isUpPressed: boolean, isRightPressed: boolean, isDownPressed: boolean };
+  mouse: { position: Vector2, leftPressed: boolean, rightPressed: boolean };
 }
 
 export interface GameState {
   hostPlayerState: PlayerState;
   peerPlayerState: PlayerState;
+  bulletState: BulletState[];
   enemyStates: Map<number, EnemyState>;
   mapState: MapState;
 }

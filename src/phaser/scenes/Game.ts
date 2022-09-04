@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
 import { Player } from '../game_objects/player';
-import type { GameState, PeerPlayerState } from 'src/lib/game_state';
+import { AttackType } from '../../lib/game_state';
+import type { GameState, PeerPlayerState } from '../../lib/game_state';
 import { getIsHost } from '../../globals';
 import { sendGameUpdate, sendPeerPlayerUpdate } from '../../lib/connection';
 import type { Cursors } from '../type_defs';
-import { BulletGroup } from '../game_objects/bullet';
+import { BulletGroup, Bullet } from '../game_objects/bullet';
 
 export class GameScene extends Phaser.Scene {
   hostPlayer: Player;
@@ -21,18 +22,22 @@ export class GameScene extends Phaser.Scene {
     this.hostPlayer.setPosition(...gameState.hostPlayerState.position);
     this.hostPlayer.setTurretRotation(gameState.hostPlayerState.turretRotation);
 
+
     this.peerPlayer.setAngle(gameState.peerPlayerState.angle);
     this.peerPlayer.setPosition(...gameState.peerPlayerState.position);
     this.peerPlayer.setTurretRotation(gameState.peerPlayerState.turretRotation);
+
+    this.bullets.setState(gameState.bulletState);
   }
 
   syncPeerPlayerState(peerPlayerState: PeerPlayerState) {
     this.peerPlayer.setAngle(this.peerPlayer.computePlayerAngle(
-      peerPlayerState.cursors.isLeftPressed, peerPlayerState.cursors.isRightPressed));
+      peerPlayerState.keys.isLeftPressed, peerPlayerState.keys.isRightPressed));
     const computedVelocity = this.peerPlayer.computePlayerVelocity(
-      peerPlayerState.cursors.isDownPressed, peerPlayerState.cursors.isUpPressed);
+      peerPlayerState.keys.isDownPressed, peerPlayerState.keys.isUpPressed);
     this.peerPlayer.setVelocity(computedVelocity.x, computedVelocity.y);
-    this.peerPlayer.setTurretRotation(this.peerPlayer.computeTurretRotation(...peerPlayerState.mousePosition));
+    this.peerPlayer.setTurretRotation(this.peerPlayer.computeTurretRotation(...peerPlayerState.mouse.position));
+    this.peerPlayer.setAttack(peerPlayerState.mouse.leftPressed, peerPlayerState.mouse.rightPressed);
   }
 
   preload() {
@@ -73,6 +78,7 @@ export class GameScene extends Phaser.Scene {
       new Phaser.Math.Vector2(400, 350),
       /** isUserControlled = */ getIsHost(),
       this.cursors,
+      this.input.activePointer,
       worldLayer,
       this.bullets
     );
@@ -81,34 +87,40 @@ export class GameScene extends Phaser.Scene {
       new Phaser.Math.Vector2(700, 350),
       /** isUserControlled = */ false,
       this.cursors,
+      this.input.activePointer,
       worldLayer,
       this.bullets
     );
 
     this.physics.add.collider(this.bullets, this.peerPlayer);
     this.physics.add.collider(this.bullets, this.hostPlayer);
-    this.physics.add.collider(this.bullets, worldLayer);
+    this.physics.add.collider(this.bullets, worldLayer, (bullet as Bullet, ) => {
+      bullet.onBounceOffWall();
+    });
 
     this.physics.add.collider(this.hostPlayer, this.peerPlayer);
   }
 
   update(time: number, delta: number) {
+    super.update(time, delta);
+
     if (getIsHost()) {
       sendGameUpdate({
         hostPlayerState: this.hostPlayer.getCurrentState(),
         peerPlayerState: this.peerPlayer.getCurrentState(),
         enemyStates: new Map(),
-        mapState: { mapGrid: [] }
+        mapState: { mapGrid: [] },
+        bulletState: this.bullets.getState(),
       });
     } else {
       sendPeerPlayerUpdate({
-        cursors: {
+        keys: {
           isLeftPressed: this.cursors.LEFT.isDown || this.cursors.A.isDown,
           isUpPressed: this.cursors.UP.isDown || this.cursors.W.isDown,
           isRightPressed: this.cursors.RIGHT.isDown || this.cursors.D.isDown,
           isDownPressed: this.cursors.DOWN.isDown || this.cursors.S.isDown,
         },
-        mousePosition: [this.input.x, this.input.y]
+        mouse: { position: [this.input.x, this.input.y], leftPressed: this.input.activePointer.leftButtonDown(), rightPressed: this.input.activePointer.rightButtonDown() },
       });
     }
   }

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
-import { BulletGroup } from './bullet';
-import type { PlayerState } from 'src/lib/game_state';
+import type { BulletGroup } from './bullet';
+import type { PlayerState } from '../../lib/game_state';
+import { AttackType } from '../../lib/game_state';
 import type { Cursors } from '../type_defs';
 
 const PLAYER_SPEED = 300;
@@ -11,7 +12,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private currentSpeed: number = 0;
   private shadow: Phaser.GameObjects.Sprite;
   private isReverse = false;
-  private isFiring = false;
+  private didFire = false;
   turret: Phaser.GameObjects.Sprite;
 
   constructor(
@@ -19,7 +20,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     initialPos: Phaser.Math.Vector2,
     private isUserControlled: boolean,
     private cursors: Cursors,
-    private collider: Phaser.GameObjects.GameObject,
+    private pointer: Phaser.Input.Pointer,
+    collider: Phaser.GameObjects.GameObject,
     private bullets: BulletGroup,
   ) {
     super(scene, initialPos.x, initialPos.y, "tanks", "tank1");
@@ -55,16 +57,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.shadow.setDepth(1);
     this.setDepth(2);
     this.turret.setDepth(3);
-
-    if (this.isUserControlled) {
-      this.scene.input.on('pointerdown', (pointer) => {
-        this.isFiring = true;
-      });
-    }
   }
 
   fire() {
-    this.isFiring = true;
+    if (!this.didFire) {
+      this.bullets.fireBullet(this.x, this.y, this.turret.rotation);
+      this.didFire = true;
+      this.scene.time.delayedCall(300, () => this.didFire = false);
+    }
   }
 
   getCurrentState(): PlayerState {
@@ -74,11 +74,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       turretRotation: this.turret.rotation,
       health: 0,
       isDead: false,
+      attack: this.didFire ? AttackType.BULLET : undefined,
     };
   }
 
   setTurretRotation(rotation: number) {
     this.turret.rotation = rotation;
+  }
+
+  setAttack(leftButtonDown: boolean, rightButtonDown: boolean) {
+    if (leftButtonDown) {
+      this.fire();
+    }
   }
 
   computePlayerAngle(leftPressed: boolean, rightPressed: boolean) {
@@ -136,6 +143,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       const computedVelocity = this.computePlayerVelocity(this.cursors.DOWN.isDown || this.cursors.S.isDown,
         this.cursors.UP.isDown || this.cursors.W.isDown);
       this.setVelocity(computedVelocity.x, computedVelocity.y);
+      this.setAttack(this.pointer.leftButtonDown(), this.pointer.rightButtonDown());
     }
 
     this.shadow.x = this.x;
@@ -146,10 +154,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.turret.y = this.y;
     if (this.isUserControlled) {
       this.setTurretRotation(this.computeTurretRotation(this.scene.input.x, this.scene.input.y));
-    }
-    if (this.isFiring) {
-      this.bullets.fireBullet(this.x, this.y, this.turret.rotation);
-      this.isFiring = false;
     }
   }
 }

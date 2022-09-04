@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import type { BulletState } from 'src/lib/game_state';
 
 export class BulletGroup extends Phaser.Physics.Arcade.Group {
   constructor(scene: Phaser.Scene) {
@@ -13,7 +14,33 @@ export class BulletGroup extends Phaser.Physics.Arcade.Group {
       visible: false,
       key: 'bullet'
     })
+  }
 
+  setState(state: BulletState[]) {
+    const children = this.getChildren() as Bullet[];
+    for (let i = 0; i < state.length; i++) {
+      const bullet = children[i];
+      if (state[i].visible) {
+        console.log(state[i].rotation);
+        bullet.setPosition(...state[i].position);
+        bullet.setRotation(state[i].rotation);
+        bullet.setActive(true);
+        bullet.setVisible(true);
+      } else {
+        bullet.setActive(false);
+        bullet.setVisible(false);
+      }
+    }
+  }
+
+  getState(): BulletState[] {
+    return this.getChildren().map((bullet: Bullet) => {
+      return {
+        rotation: bullet.rotation,
+        position: [bullet.x, bullet.y],
+        visible: bullet.visible,
+      };
+    });
   }
 
   fireBullet(initX: number, initY: number, rotation: number) {
@@ -28,17 +55,34 @@ export class BulletGroup extends Phaser.Physics.Arcade.Group {
 }
 
 const BULLET_SPEED = 600;
+const MAX_BOUNCES = 2;
 
-class Bullet extends Phaser.Physics.Arcade.Sprite {
+export class Bullet extends Phaser.Physics.Arcade.Sprite {
+  userFired = false;
+  private bounces = 0;
+
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, 'bullet');
   }
+
+  onBounceOffWall() {
+    if (this.bounces === MAX_BOUNCES) {
+      this.setActive(false);
+      this.setVisible(false);
+      this.bounces = 0;
+      this.userFired = false;
+    } else {
+      this.bounces++;
+    }
+  }
+
 
   reset(x: number, y: number) {
     this.body.reset(x, y);
   }
 
   fire(rotation: number) {
+    this.userFired = true;
     this.setRotation(rotation);
     this.setActive(true);
     this.setVisible(true);
@@ -49,8 +93,8 @@ class Bullet extends Phaser.Physics.Arcade.Sprite {
 
   preUpdate(time: number, delta: number) {
     super.preUpdate(time, delta);
-    this.setRotation(this.body.velocity.angle());
-
-    // TODO remove after two bounces.
+    if (this.userFired) {
+      this.setRotation(this.body.velocity.angle());
+    }
   }
 }
