@@ -69,6 +69,7 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
     if (this.bounces === MAX_BOUNCES) {
       this.setActive(false);
       this.setVisible(false);
+      this.disableBody();
       this.bounces = 0;
       this.userFired = false;
     } else {
@@ -76,9 +77,14 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
+  disable() {
+    this.setActive(false);
+    this.setVisible(false);
+    this.disableBody();
+  }
 
   reset(x: number, y: number) {
-    this.body.reset(x, y);
+    this.enableBody(true, x, y, true, true);
   }
 
   fire(rotation: number) {

@@ -7,11 +7,15 @@ import { sendGameUpdate, sendPeerPlayerUpdate } from '../../lib/connection';
 import type { Cursors } from '../type_defs';
 import { BulletGroup, Bullet } from '../game_objects/bullet';
 
+export const SCREEN_WIDTH = 1920;
+export const SCREEN_HEIGHT = 1280;
+
 export class GameScene extends Phaser.Scene {
   hostPlayer: Player;
   peerPlayer: Player;
   cursors: Cursors;
   bullets: BulletGroup;
+  worldLayer: Phaser.Tilemaps.TilemapLayer;
 
   constructor() {
     super('GameScene');
@@ -21,11 +25,16 @@ export class GameScene extends Phaser.Scene {
     this.hostPlayer.setAngle(gameState.hostPlayerState.angle);
     this.hostPlayer.setPosition(...gameState.hostPlayerState.position);
     this.hostPlayer.setTurretRotation(gameState.hostPlayerState.turretRotation);
-
+    if (gameState.hostPlayerState.isDead) {
+      this.hostPlayer.kill();
+    }
 
     this.peerPlayer.setAngle(gameState.peerPlayerState.angle);
     this.peerPlayer.setPosition(...gameState.peerPlayerState.position);
     this.peerPlayer.setTurretRotation(gameState.peerPlayerState.turretRotation);
+    if (gameState.peerPlayerState.isDead) {
+      this.peerPlayer.kill();
+    }
 
     this.bullets.setState(gameState.bulletState);
   }
@@ -44,6 +53,7 @@ export class GameScene extends Phaser.Scene {
     this.load.image('tiles', 'src/assets/tilesets/grass.png');
     this.load.tilemapTiledJSON("map", "src/assets/tilemaps/map.json");
     this.load.atlas('tanks', 'src/assets/characters/tank/tanks.png', 'src/assets/characters/tank/tanks.json');
+    this.load.atlas('tanks_peer', 'src/assets/characters/tank/tanks_peer.png', 'src/assets/characters/tank/tanks.json');
     this.load.image('bullet', 'src/assets/characters/bullet.png');
   }
 
@@ -55,9 +65,9 @@ export class GameScene extends Phaser.Scene {
     const tileset = map.addTilesetImage("grass", "tiles");
 
     // Parameters: layer name (or index) from Tiled, tileset, x, y
-    const worldLayer = map.createLayer("Tile Layer 1", tileset, 0, 0).setScale(2);
+    this.worldLayer = map.createLayer("Tile Layer 1", tileset, 0, 0).setScale(2);
 
-    worldLayer.setCollisionByProperty({ collides: true });
+    this.worldLayer.setCollisionByProperty({ collides: true });
 
     this.cursors = this.input.keyboard.addKeys(
       {
@@ -73,28 +83,54 @@ export class GameScene extends Phaser.Scene {
 
     this.bullets = new BulletGroup(this);
 
+
+    this.initPlayers();
+    this.initColliders();
+  }
+
+  initPlayers() {
     this.hostPlayer = new Player(
       this,
-      new Phaser.Math.Vector2(400, 350),
+      /** isHostPlayer = */ true,
       /** isUserControlled = */ getIsHost(),
       this.cursors,
       this.input.activePointer,
-      worldLayer,
-      this.bullets
-    );
-    this.peerPlayer = new Player(
-      this,
-      new Phaser.Math.Vector2(700, 350),
-      /** isUserControlled = */ false,
-      this.cursors,
-      this.input.activePointer,
-      worldLayer,
       this.bullets
     );
 
-    this.physics.add.collider(this.bullets, this.peerPlayer);
-    this.physics.add.collider(this.bullets, this.hostPlayer);
-    this.physics.add.collider(this.bullets, worldLayer, (bullet as Bullet, ) => {
+    this.peerPlayer = new Player(
+      this,
+      /** isHostPlayer = */ false,
+      /** isUserControlled = */ false,
+      this.cursors,
+      this.input.activePointer,
+      this.bullets
+    );
+  }
+
+  initColliders() {
+    this.physics.add.collider(this.peerPlayer, this.worldLayer);
+    this.physics.add.collider(this.hostPlayer, this.worldLayer);
+
+    if (getIsHost()) {
+      console.log("wtf");
+      this.physics.add.collider(this.bullets, this.peerPlayer, (_, bullet as Bullet) => {
+        bullet.setVisible(false);
+        bullet.setActive(false);
+        bullet.disableBody();
+        this.peerPlayer.takeDamage();
+      });
+
+      this.physics.add.collider(this.bullets, this.hostPlayer, (_, bullet as Bullet) => {
+        bullet.setVisible(false);
+        bullet.setActive(false);
+        bullet.disableBody();
+        this.hostPlayer.takeDamage();
+      });
+    }
+
+    this.physics.add.collider(this.bullets, this.worldLayer, (bullet as Bullet, ) => {
+      console.log("wtf");
       bullet.onBounceOffWall();
     });
 

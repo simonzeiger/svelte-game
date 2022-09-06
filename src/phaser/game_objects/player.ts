@@ -7,36 +7,42 @@ import type { Cursors } from '../type_defs';
 const PLAYER_SPEED = 300;
 const PLAYER_DECEL = 16;
 const ANGLE_DELTA = 3;
+const MAX_PLAYER_HEALTH = 3;
+
+const HOST_INIT_POS = new Phaser.Math.Vector2(400, 650);
+const PEER_INIT_POS = new Phaser.Math.Vector2(1500, 650);
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   private currentSpeed: number = 0;
   private shadow: Phaser.GameObjects.Sprite;
   private isReverse = false;
   private didFire = false;
+  private health = MAX_PLAYER_HEALTH;
+  private isDead = false;
   turret: Phaser.GameObjects.Sprite;
 
   constructor(
     public scene: Phaser.Scene,
-    initialPos: Phaser.Math.Vector2,
+    private isHostPlayer: boolean,
     private isUserControlled: boolean,
     private cursors: Cursors,
     private pointer: Phaser.Input.Pointer,
-    collider: Phaser.GameObjects.GameObject,
     private bullets: BulletGroup,
   ) {
-    super(scene, initialPos.x, initialPos.y, "tanks", "tank1");
+    const initialPos = isHostPlayer ? HOST_INIT_POS : PEER_INIT_POS;
+    const spriteName = isHostPlayer ? "tanks" : "tanks_peer";
+
+    super(scene, initialPos.x, initialPos.y, spriteName, "tank1");
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
-
-    scene.physics.add.collider(this, collider);
 
     this.setPushable(false);
     this.setOrigin(0.5, 0.5);
 
     const animConfig = {
       key: 'move',
-      frames: this.anims.generateFrameNames('tanks', {
+      frames: this.anims.generateFrameNames(spriteName, {
         prefix: 'tank',
         start: 1,
         end: 6,
@@ -48,15 +54,31 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.anims.create(animConfig);
     this.play('move');
 
-    this.shadow = this.scene.add.sprite(0, 0, "tanks", "shadow");
+    this.shadow = this.scene.add.sprite(0, 0, spriteName, "shadow");
     this.shadow.setOrigin(.5, .5);
 
-    this.turret = this.scene.add.sprite(0, 0, 'tanks', 'turret');
+    this.turret = this.scene.add.sprite(0, 0, spriteName, 'turret');
     this.turret.setOrigin(0.3, 0.5);
 
     this.shadow.setDepth(1);
     this.setDepth(2);
     this.turret.setDepth(3);
+  }
+
+  takeDamage() {
+    this.health--;
+    if (this.health <= 0) {
+      this.kill();
+    }
+  }
+
+  kill() {
+    this.isDead = true;
+    this.shadow.setVisible(false);
+    this.turret.setVisible(false);
+    this.setActive(false);
+    this.setVisible(false);
+    this.disableBody();
   }
 
   fire() {
@@ -73,7 +95,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       angle: this.angle,
       turretRotation: this.turret.rotation,
       health: 0,
-      isDead: false,
+      isDead: this.isDead,
       attack: this.didFire ? AttackType.BULLET : undefined,
     };
   }

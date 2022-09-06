@@ -1,6 +1,9 @@
 import Phaser from 'phaser';
 import { GameScene } from './scenes/Game';
 
+export const SCREEN_WIDTH = 1920;
+export const SCREEN_HEIGHT = 1280;
+
 export default {
   type: Phaser.AUTO,
   parent: 'game',
@@ -9,8 +12,8 @@ export default {
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: 1920,
-    height: 1280,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
   },
   physics: {
     default: "arcade",

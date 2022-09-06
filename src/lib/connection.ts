@@ -36,6 +36,11 @@ const servers = {
   iceCandidatePoolSize: 10,
 };
 
+let peerConnectedPromiseResolve;
+export const peerConnectedPromise = new Promise((resolve, reject) => {
+  peerConnectedPromiseResolve = resolve;
+});
+
 const db = getFirestore();
 const pc = initRemoteConnection();
 
@@ -54,6 +59,7 @@ function initRemoteConnection() {
       peerPlayerDataChannel = dcEvent.channel;
       // Listen on the host player to synchronize the peer player.
       if (getIsHost()) {
+        peerConnectedPromiseResolve();
         peerPlayerDataChannel.addEventListener("message", (event: MessageEvent) => {
           syncPeerPlayer(event.data);
         });
