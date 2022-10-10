@@ -21,7 +21,6 @@ export class BulletGroup extends Phaser.Physics.Arcade.Group {
     for (let i = 0; i < state.length; i++) {
       const bullet = children[i];
       if (state[i].visible) {
-        console.log(state[i].rotation);
         bullet.setPosition(...state[i].position);
         bullet.setRotation(state[i].rotation);
         bullet.setActive(true);

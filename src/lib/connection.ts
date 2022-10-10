@@ -86,7 +86,6 @@ export async function createLobby() {
   const answerCandidates = collection(lobbyDoc, "answerCandidates");
 
   const lobbyId = lobbyDoc.id;
-  console.log(lobbyId);
 
   // Get candidates for caller, save to db
   pc.onicecandidate = (event) => {
