@@ -23,11 +23,9 @@
 <main>
   {#if !lobbyConnected}
     <Client {onLobbyConnected} />
-  {:else if fromPeer}
-    <Game />
   {:else}
     <Lobby {lobbyId} />
-    {#if peerConnected}
+    {#if peerConnected || fromPeer}
       <Game />
     {/if}
   {/if}

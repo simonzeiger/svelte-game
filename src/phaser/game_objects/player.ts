@@ -8,6 +8,7 @@ const PLAYER_SPEED = 300;
 const PLAYER_DECEL = 16;
 const ANGLE_DELTA = 3;
 const MAX_PLAYER_HEALTH = 3;
+const MAX_BULLETS = 8;
 
 const HOST_INIT_POS = new Phaser.Math.Vector2(400, 650);
 const PEER_INIT_POS = new Phaser.Math.Vector2(1500, 650);
@@ -19,6 +20,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private didFire = false;
   private health = MAX_PLAYER_HEALTH;
   private isDead = false;
+  private bulletCount = MAX_BULLETS;
   turret: Phaser.GameObjects.Sprite;
 
   constructor(
@@ -65,11 +67,27 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.turret.setDepth(3);
   }
 
+  reset() {
+    const initialPos = this.isHostPlayer ? HOST_INIT_POS : PEER_INIT_POS;
+    this.setPosition(initialPos.x, initialPos.y);
+    this.isDead = false;
+    this.health = MAX_PLAYER_HEALTH;
+    this.currentSpeed = 0;
+    this.shadow.setVisible(true);
+    this.turret.setVisible(true);
+    this.setActive(true);
+    this.setVisible(true);
+  }
+
   takeDamage() {
     this.health--;
     if (this.health <= 0) {
       this.kill();
     }
+  }
+
+  getIsDead() {
+    return this.isDead;
   }
 
   kill() {
@@ -78,14 +96,22 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.turret.setVisible(false);
     this.setActive(false);
     this.setVisible(false);
-    this.disableBody();
   }
 
   fire() {
     if (!this.didFire) {
-      this.bullets.fireBullet(this.x, this.y, this.turret.rotation);
+      this.bulletCount--;
       this.didFire = true;
-      this.scene.time.delayedCall(300, () => this.didFire = false);
+      this.bullets.fireBullet(this.x, this.y, this.turret.rotation);
+
+      if (this.bulletCount <= 0) {
+        this.scene.time.delayedCall(1200, () => {
+          this.didFire = false;
+          this.bulletCount = MAX_BULLETS;
+        });
+      } else {
+        this.scene.time.delayedCall(300, () => this.didFire = false);
+      }
     }
   }
 

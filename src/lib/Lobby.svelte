@@ -1,21 +1,19 @@
 <script lang="ts">
   import { peerConnectedPromise } from "./connection";
+  import { lobbyDialogState, LobbyDialogState } from "./game_state";
 
-  export let lobbyId: string;
-
-  let show = true;
+  export let lobbyId: string | undefined;
 
   function copyLobbyId() {
     navigator.clipboard.writeText(lobbyId);
   }
 
   peerConnectedPromise.then(() => {
-    show = false;
+    $lobbyDialogState = LobbyDialogState.HIDDEN;
   });
 </script>
 
-<!-- This example requires Tailwind CSS v2.0+ -->
-{#if show}
+{#if $lobbyDialogState !== LobbyDialogState.HIDDEN}
   <div
     class="relative z-10"
     aria-labelledby="modal-title"
@@ -40,38 +38,48 @@
                 >
                   Waiting for other player...
                 </h3>
+
                 <div class="mt-2">
                   <p class="text-sm text-gray-500">
-                    Send your friend the lobby id so the match can begin.
+                    {#if $lobbyDialogState === LobbyDialogState.WITH_LOBBY_ID}
+                      Send your friend the lobby id so the match can begin.
+                    {:else}
+                      Make sure your friend hits play again!
+                    {/if}
                   </p>
                 </div>
               </div>
             </div>
           </div>
-          <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-            <button
-              on:click={copyLobbyId}
-              type="button"
-              class="inline-flex w-full justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm"
+
+          {#if $lobbyDialogState === LobbyDialogState.WITH_LOBBY_ID}
+            <div
+              class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6"
             >
-              <svg
-                class="fill-white"
-                xmlns="http://www.w3.org/2000/svg"
-                height="48"
-                width="48"
-                style="zoom:0.5;margin-right:10px"
-                ><path
-                  d="M9 43.95q-1.2 0-2.1-.9-.9-.9-.9-2.1V10.8h3v30.15h23.7v3Zm6-6q-1.2 0-2.1-.9-.9-.9-.9-2.1v-28q0-1.2.9-2.1.9-.9 2.1-.9h22q1.2 0 2.1.9.9.9.9 2.1v28q0 1.2-.9 2.1-.9.9-2.1.9Zm0-3h22v-28H15v28Zm0 0v-28 28Z"
-                /></svg
+              <button
+                on:click={copyLobbyId}
+                type="button"
+                class="inline-flex w-full justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm"
               >
-              Copy
-            </button>
-            <div>
-              <div class="align-start">
-                {lobbyId}
+                <svg
+                  class="fill-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  height="48"
+                  width="48"
+                  style="zoom:0.5;margin-right:10px"
+                  ><path
+                    d="M9 43.95q-1.2 0-2.1-.9-.9-.9-.9-2.1V10.8h3v30.15h23.7v3Zm6-6q-1.2 0-2.1-.9-.9-.9-.9-2.1v-28q0-1.2.9-2.1.9-.9 2.1-.9h22q1.2 0 2.1.9.9.9.9 2.1v28q0 1.2-.9 2.1-.9.9-2.1.9Zm0-3h22v-28H15v28Zm0 0v-28 28Z"
+                  /></svg
+                >
+                Copy
+              </button>
+              <div>
+                <div class="align-start">
+                  {lobbyId}
+                </div>
               </div>
             </div>
-          </div>
+          {/if}
         </div>
       </div>
     </div>

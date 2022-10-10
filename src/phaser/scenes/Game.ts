@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { Player } from '../game_objects/player';
-import { AttackType } from '../../lib/game_state';
+import { isGameOver, didWin } from '../../lib/game_state';
 import type { GameState, PeerPlayerState } from '../../lib/game_state';
 import { getIsHost } from '../../globals';
 import { sendGameUpdate, sendPeerPlayerUpdate } from '../../lib/connection';
@@ -19,6 +19,11 @@ export class GameScene extends Phaser.Scene {
 
   constructor() {
     super('GameScene');
+  }
+
+  playAgain() {
+    this.hostPlayer.reset();
+    this.peerPlayer.reset();
   }
 
   syncGameState(gameState: GameState) {
@@ -113,7 +118,6 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.hostPlayer, this.worldLayer);
 
     if (getIsHost()) {
-      console.log("wtf");
       this.physics.add.collider(this.bullets, this.peerPlayer, (_, bullet as Bullet) => {
         bullet.setVisible(false);
         bullet.setActive(false);
@@ -130,7 +134,6 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.physics.add.collider(this.bullets, this.worldLayer, (bullet as Bullet, ) => {
-      console.log("wtf");
       bullet.onBounceOffWall();
     });
 
@@ -139,6 +142,23 @@ export class GameScene extends Phaser.Scene {
 
   update(time: number, delta: number) {
     super.update(time, delta);
+
+    if (this.peerPlayer.getIsDead() || this.hostPlayer.getIsDead()) {
+      isGameOver.set(true);
+      if (getIsHost()) {
+        if (this.peerPlayer.getIsDead()) {
+          didWin.set(true);
+        } else {
+          didWin.set(false);
+        }
+      } else {
+        if (this.hostPlayer.getIsDead()) {
+          didWin.set(true);
+        } else {
+          didWin.set(false);
+        }
+      }
+    }
 
     if (getIsHost()) {
       sendGameUpdate({
@@ -156,7 +176,11 @@ export class GameScene extends Phaser.Scene {
           isRightPressed: this.cursors.RIGHT.isDown || this.cursors.D.isDown,
           isDownPressed: this.cursors.DOWN.isDown || this.cursors.S.isDown,
         },
-        mouse: { position: [this.input.x, this.input.y], leftPressed: this.input.activePointer.leftButtonDown(), rightPressed: this.input.activePointer.rightButtonDown() },
+        mouse: {
+          position: [this.input.x, this.input.y],
+          leftPressed: this.input.activePointer.leftButtonDown(),
+          rightPressed: this.input.activePointer.rightButtonDown(),
+        },
       });
     }
   }

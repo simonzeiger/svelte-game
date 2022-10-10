@@ -1,5 +1,6 @@
 <script lang="ts">
   import { joinLobby, createLobby } from "./connection";
+  import { LobbyDialogState, lobbyDialogState } from "./game_state";
 
   export let onLobbyConnected: (lobbyId: string, fromPeer?: boolean) => void;
 
@@ -14,6 +15,7 @@
         class="btn btn-blue"
         on:click={async () => {
           lobbyId = await createLobby();
+          lobbyDialogState.set(LobbyDialogState.WITH_LOBBY_ID);
           onLobbyConnected(lobbyId);
         }}>Create Lobby</button
       >
@@ -31,6 +33,7 @@
         class="btn btn-blue"
         on:click={() => {
           joinLobby(lobbyId);
+          lobbyDialogState.set(LobbyDialogState.HIDDEN);
           onLobbyConnected(lobbyId, true);
         }}>Join</button
       >

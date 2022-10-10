@@ -1,5 +1,6 @@
 import { getGame } from "../phaser/index";
 import type { GameScene } from "../phaser/scenes/Game";
+import { writable } from 'svelte/store';
 
 type Vector2 = [number, number];
 
@@ -67,3 +68,17 @@ export function syncGameState(newState: string) {
 export function syncPeerPlayer(newState: string) {
   resolveGameScene().syncPeerPlayerState(JSON.parse(newState) as PeerPlayerState);
 }
+
+export function playAgain() {
+  resolveGameScene().playAgain();
+}
+
+export const isGameOver = writable(false)
+export const didWin = writable(false)
+
+export enum LobbyDialogState {
+  HIDDEN,
+  WITH_LOBBY_ID,
+  PLAY_AGAIN,
+}
+export const lobbyDialogState = writable(LobbyDialogState.HIDDEN);
