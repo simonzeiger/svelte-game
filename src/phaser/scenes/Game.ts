@@ -7,12 +7,6 @@ import { sendGameUpdate, sendPeerPlayerUpdate } from '../../lib/connection';
 import type { Cursors } from '../type_defs';
 import { BulletGroup, Bullet } from '../game_objects/bullet';
 
-import tiles from '../../assets/tilesets/grass.png';
-import map from "../../assets/tilemaps/map.json";
-import tanks from '../../assets/characters/tank/tanks.png';
-import tanksJson from '../../assets/characters/tank/tanks.json';
-import tanksPeer from '../../assets/characters/tank/tanks_peer.png';
-import bulletImg from '../../assets/characters/bullet.png';
 
 export const SCREEN_WIDTH = 1920;
 export const SCREEN_HEIGHT = 1280;
@@ -62,11 +56,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image('tiles', tiles);
-    this.load.tilemapTiledJSON("map", map);
-    this.load.atlas('tanks', tanks, tanksJson);
-    this.load.atlas('tanks_peer', tanksPeer, tanksJson);
-    this.load.image('bullet', bulletImg);
+    this.load.image('tiles', 'assets/tilesets/grass.png');
+    this.load.tilemapTiledJSON("map", "assets/tilemaps/map.json");
+    this.load.atlas('tanks', 'assets/characters/tank/tanks.png', 'assets/characters/tank/tanks.json');
+    this.load.atlas('tanks_peer', 'assets/characters/tank/tanks_peer.png', 'assets/characters/tank/tanks.json');
+    this.load.image('bullet', 'assets/characters/bullet.png');
   }
 
   create() {
